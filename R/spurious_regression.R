@@ -4,6 +4,7 @@ library(prais)
 library(ggplot2)
 library(ggfortify)
 library(gridExtra)
+library(forecast)
 
 # ホワイトノイズ同士で回帰
 n_sample <- 400
@@ -85,6 +86,39 @@ summary(mod_gls_PW)
 # 単位根へは差分を取る
 mod_lm_diff <- lm(diff(y_rw) ~ diff(x_rw))
 summary(mod_lm_diff)
+
+
+
+#単位根同士で回帰させて予測させる
+train_size = 390
+y_train <- window(y_rw, end=train_size)
+x_train <- window(x_rw, end=train_size)
+y_test <- window(y_rw, start=train_size+1)
+x_test <- window(x_rw, start=train_size+1)
+
+# 回帰
+mod_ols_rw2 <- lm(y_train ~ x_train)
+summary(mod_ols_rw2)
+
+# 残差
+resid_ols <- mod_ols_rw2$residuals
+# DW検定(DW統計量が2に近いと自己相関が0)
+dwtest(mod_ols_rw2)
+# 自己相関のプロット
+ggtsdisplay(resid_ols)
+
+# 推定モデルでの予測
+pred <- forecast(
+  mod_ols_rw2,
+  newdata = x_test,
+  level = c(95, 70)
+)
+plot(ts(pred$mean),lwd=2,type="l",col="red")
+par(new=T)
+plot(ts(y_test),lwd=2,type="l",col="blue",axes=F)
+axis(4)
+
+
 
 
 
